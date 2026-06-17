@@ -72,7 +72,7 @@ int main() {
                       "<div class='f-group'><label>3. عدد الأدوار:</label><input type='number' name='floors' required></div>"
                       "<div class='f-group'><label>4. عمق الحفرة (CM):</label><input type='number' name='pit' required></div>"
                       "<div class='f-group'><label>5. الارتفاع العلوي (CM):</label><input type='number' name='overhead' required></div>"
-                      "<button type='submit'>📊 حساب المقايسة والتكلفة</button></form></div></body></html>";
+                      "<button type='submit'>📊 doun</button></form></div></body></html>";
         res.set_content(html, "text/html; charset=utf-8");
     });
 
