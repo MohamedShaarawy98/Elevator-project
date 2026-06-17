@@ -64,7 +64,7 @@ int main() {
                       "label{font-weight:600;color:#495057;display:block;margin-bottom:4px;font-size:14px;}"
                       "input,select{width:100%;padding:8px;border:1px solid #ced4da;border-radius:6px;box-sizing:border-box;text-align:center;font-size:16px;background:#f8f9fa;}"
                       "button{background:#28a745;color:white;border:none;padding:12px;border-radius:6px;width:100%;font-size:16px;font-weight:bold;cursor:pointer;margin-top:10px;}"
-                      "</style></head><body><div class='card'><h2>🛠️ مقايسة وبضاعة المصعد</h2>"
+                      "</style></head><body><div class='card'><h1>🛠️ الشعراوي بيمسي عليكم</h1>"
                       "<form action='/calculate' method='get'>"
                       "<div class='f-group'><label>نوع النظام:</label><select name='m_type'><option value='MR'>بغرفة محرك (MR)</option><option value='MRL'>بدون غرفة محرك (MRL)</option></select></div>"
                       "<div class='f-group'><label>1. عرض البئر (CM):</label><input type='number' name='width' required></div>"
