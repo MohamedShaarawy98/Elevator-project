@@ -136,7 +136,6 @@ int main() {
 
         PGconn* conn = connect_db();
         if (PQstatus(conn) == CONNECTION_OK) {
-            // تصحيح الأقواس هنا لتصبح مصفوفة صالحة للـ C++
             const char* paramValues[] = { name.c_str(), m_type.c_str(), width.c_str(), depth.c_str(), floors.c_str(), pit.c_str(), overhead.c_str(), status.c_str() };
             string query = "INSERT INTO inspections (client_name, m_type, width, depth, floors, pit, overhead, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);";
             PGresult* insert_res = PQexecParams(conn, query.c_str(), 8, NULL, paramValues, NULL, NULL, 0);
@@ -186,3 +185,4 @@ int main() {
                 insp.id = stoi(PQgetvalue(query_res, i, 0));
                 insp.client_name = PQgetvalue(query_res, i, 1);
                 insp.m_type = PQgetvalue(query_res, i, 2);
+                insp.width = stoi(PQgetvalue(query_res, i, 3));
