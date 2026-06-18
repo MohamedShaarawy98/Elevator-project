@@ -105,7 +105,7 @@ int main() {
                       "button{background:#007bff;color:white;border:none;padding:12px;border-radius:6px;width:100%;font-size:16px;font-weight:bold;cursor:pointer;margin-top:10px;}"
                       ".nav-links{display:flex;justify-content:space-between;width:100%;max-width:400px;margin-top:15px;direction:rtl;}"
                       ".nav-links a{color:#007bff;text-decoration:none;font-size:15px;font-weight:bold;}"
-                      "</style></head><body><div class='card'><h2>👷‍♂️ لوحة الفني: رفع معاينة (سحابي)</h2>"
+                      "</style></head><body><div class='card'><h2>👷‍♂️ لوحة الفني: الشعراوي بيمسي</h2>"
                       "<form action='/save' method='get'>"
                       "<div class='f-group'><label>اسم العميل:</label><input type='text' name='c_name' required placeholder='اسم العميل بالكامل'></div>"
                       "<div class='f-group'><label>نوع النظام:</label><select name='m_type'><option value='MR'>بغرفة محرك (MR)</option><option value='MRL'>بدون غرفة محرك (MRL)</option></select></div>"
@@ -114,9 +114,9 @@ int main() {
                       "<div class='f-group'><label>3. عدد الأدوار:</label><input type='number' name='floors' required></div>"
                       "<div class='f-group'><label>4. عمق الحفرة (CM):</label><input type='number' name='pit' required></div>"
                       "<div class='f-group'><label>5. الارتفاع العلوي (CM):</label><input type='number' name='overhead' required></div>"
-                      "<button type='submit'>💾 حفظ في قاعدة البيانات السحابية</button></form></div>"
-                      "<div class='nav-links'><a href='/tech-view'>📋 استعراض المعاينات السابقة</a>"
-                      "<a href='/admin-login'>💼 لوحة المدير ←</a></div></body></html>";
+                      "<button type='submit'>💾 احفظ يافخم</button></form></div>"
+                      "<div class='nav-links'><a href='/tech-view'>📋 المعاينات السابقة</a>"
+                      "<a href='/admin-login'>💚 اتفضل يامدير ←</a></div></body></html>";
         res.set_content(html, "text/html; charset=utf-8");
     });
 
@@ -140,8 +140,8 @@ int main() {
         PQfinish(conn);
 
         string success = "<html><head><meta charset='UTF-8'></head><body style='font-family:sans-serif; text-align:center; padding-top:50px; direction:rtl;'>"
-                         "<h2 style='color:#28a745;'>✅ تم الحفظ السحابي بنجاح!</h2>"
-                         "<p>تم تأمين بيانات العميل (<b>" + name + "</b>) ولن تضيع نهائياً.</p>"
+                         "<h2 style='color:#28a745;'>البتاع اتحفظ ياخويا </h2>"
+                         "<p>بيانات العميل سر كبير☺️ (<b>" + name + "</b>) ومش هيضيع خالص😂 .</p>"
                          "<br><a href='/' style='background:#007bff; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;'>إضافة معاينة جديدة</a>"
                          "</body></html>";
         res.set_content(success, "text/html; charset=utf-8");
@@ -179,7 +179,7 @@ int main() {
            << "h2{color:#28a745;text-align:center;}table{width:100%;border-collapse:collapse;margin-top:20px;text-align:center;}"
            << "th,td{padding:12px;border-bottom:1px solid #dee2e6;}th{background:#343a40;color:white;}"
            << ".btn{background:#17a2b8;color:white;text-decoration:none;padding:6px 12px;border-radius:4px;font-size:14px;}"
-           << "</style></head><body><div class='box'><h2>📋 كشف استعراض المعاينات (للفنيين)</h2>"
+           << "</style></head><body><div class='box'><h2>📋 راجع ع المعاينة ياخويا قبل ميتخصم عليك</h2>"
            << "<p style='color:#6c757d;'>تنويه: يمكنك فقط الاطلاع على المقاسات والتقارير ولا تملك صلاحية الحذف.</p>"
            << "<table><thead><tr><th>رقم</th><th>اسم العميل</th><th>النظام</th><th>الأدوار</th><th>الحالة</th><th>تقرير المقاسات</th></tr></thead><tbody>";
 
