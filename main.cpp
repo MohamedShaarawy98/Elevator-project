@@ -20,7 +20,7 @@ struct Inspection {
     string status;
 };
 
-const string ADMIN_PASSWORD = "123"; 
+const string ADMIN_PASSWORD = "11223344"; 
 
 class Elevator {
 private:
@@ -105,7 +105,7 @@ int main() {
                       "input,select{width:100%;padding:8px;border:1px solid #ced4da;border-radius:6px;box-sizing:border-box;text-align:center;font-size:16px;background:#f8f9fa;}"
                       "button{background:#007bff;color:white;border:none;padding:12px;border-radius:6px;width:100%;font-size:16px;font-weight:bold;cursor:pointer;margin-top:10px;}"
                       "a{display:block;text-align:center;margin-top:15px;color:#6c757d;text-decoration:none;font-size:14px;}"
-                      "</style></head><body><div class='card'><h2>👷‍♂️ لوحة الفني: رفع معاينة (سحابي)</h2>"
+                      "</style></head><body><div class='card'><h2> لوحة الفني: رفع معاية</h2>"
                       "<form action='/save' method='get'>"
                       "<div class='f-group'><label>اسم العميل:</label><input type='text' name='c_name' required placeholder='اسم العميل بالكامل'></div>"
                       "<div class='f-group'><label>نوع النظام:</label><select name='m_type'><option value='MR'>بغرفة محرك (MR)</option><option value='MRL'>بدون غرفة محرك (MRL)</option></select></div>"
@@ -114,7 +114,7 @@ int main() {
                       "<div class='f-group'><label>3. عدد الأدوار:</label><input type='number' name='floors' required></div>"
                       "<div class='f-group'><label>4. عمق الحفرة (CM):</label><input type='number' name='pit' required></div>"
                       "<div class='f-group'><label>5. الارتفاع العلوي (CM):</label><input type='number' name='overhead' required></div>"
-                      "<button type='submit'>💾 حفظ في قاعدة البيانات السحابية</button></form>"
+                      "<button type='submit'>💾 حفظ في قاعدة البيانات </button></form>"
                       "<a href='/admin-login'>💼 دخول مدير التركيبات ←</a></div></body></html>";
         res.set_content(html, "text/html; charset=utf-8");
     });
@@ -139,8 +139,8 @@ int main() {
         PQfinish(conn);
 
         string success = "<html><head><meta charset='UTF-8'></head><body style='font-family:sans-serif; text-align:center; padding-top:50px; direction:rtl;'>"
-                         "<h2 style='color:#28a745;'>✅ تم الحفظ السحابي بنجاح!</h2>"
-                         "<p>تم تأمين بيانات العميل (<b>" + name + "</b>) ولن تضيع نهائياً.</p>"
+                         "<h2 style='color:#28a745;'>✅ تم الحفظ بنجاح!</h2>"
+                         "<p>تم تأمين بيانات العميل (<b>" + name + "</b>) ولن تضيع ياقلبي.</p>"
                          "<br><a href='/' style='background:#007bff; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;'>إضافة معاينة جديدة</a>"
                          "</body></html>";
         res.set_content(success, "text/html; charset=utf-8");
