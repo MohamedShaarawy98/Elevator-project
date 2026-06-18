@@ -20,7 +20,7 @@ struct Inspection {
     string status;
 };
 
-const string ADMIN_PASSWORD = "11223344"; 
+const string ADMIN_PASSWORD = "123"; 
 
 class Elevator {
 private:
@@ -90,7 +90,6 @@ void init_database() {
     }
     PQfinish(conn);
 }
-
 int main() {
     init_database(); 
     httplib::Server svr;
@@ -98,14 +97,15 @@ int main() {
 
     svr.Get("/", [](const httplib::Request&, httplib::Response& res) {
         string html = "<html><head><meta charset='UTF-8'><style>"
-                      "body{background:#f0f2f5;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}"
+                      "body{background:#f0f2f5;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box;flex-direction:column;}"
                       ".card{background:white;padding:25px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);width:100%;max-width:400px;direction:rtl;text-align:right;box-sizing:border-box;}"
                       "h2{color:#28a745;text-align:center;margin-bottom:15px;}.f-group{margin-bottom:10px;}"
                       "label{font-weight:600;color:#495057;display:block;margin-bottom:4px;font-size:14px;}"
                       "input,select{width:100%;padding:8px;border:1px solid #ced4da;border-radius:6px;box-sizing:border-box;text-align:center;font-size:16px;background:#f8f9fa;}"
                       "button{background:#007bff;color:white;border:none;padding:12px;border-radius:6px;width:100%;font-size:16px;font-weight:bold;cursor:pointer;margin-top:10px;}"
-                      "a{display:block;text-align:center;margin-top:15px;color:#6c757d;text-decoration:none;font-size:14px;}"
-                      "</style></head><body><div class='card'><h2> لوحة الفني: الشعراوي بيمسي</h2>"
+                      ".nav-links{display:flex;justify-content:space-between;width:100%;max-width:400px;margin-top:15px;direction:rtl;}"
+                      ".nav-links a{color:#007bff;text-decoration:none;font-size:15px;font-weight:bold;}"
+                      "</style></head><body><div class='card'><h2>👷‍♂️ لوحة الفني: رفع معاينة (سحابي)</h2>"
                       "<form action='/save' method='get'>"
                       "<div class='f-group'><label>اسم العميل:</label><input type='text' name='c_name' required placeholder='اسم العميل بالكامل'></div>"
                       "<div class='f-group'><label>نوع النظام:</label><select name='m_type'><option value='MR'>بغرفة محرك (MR)</option><option value='MRL'>بدون غرفة محرك (MRL)</option></select></div>"
@@ -114,8 +114,9 @@ int main() {
                       "<div class='f-group'><label>3. عدد الأدوار:</label><input type='number' name='floors' required></div>"
                       "<div class='f-group'><label>4. عمق الحفرة (CM):</label><input type='number' name='pit' required></div>"
                       "<div class='f-group'><label>5. الارتفاع العلوي (CM):</label><input type='number' name='overhead' required></div>"
-                      "<button type='submit'>💾 حفظ في قاعدة البيانات </button></form>"
-                      "<a href='/admin-login'>💼 دخول مدير التركيبات ←</a></div></body></html>";
+                      "<button type='submit'>💾 حفظ في قاعدة البيانات السحابية</button></form></div>"
+                      "<div class='nav-links'><a href='/tech-view'>📋 استعراض المعاينات السابقة</a>"
+                      "<a href='/admin-login'>💼 لوحة المدير ←</a></div></body></html>";
         res.set_content(html, "text/html; charset=utf-8");
     });
 
@@ -139,13 +140,60 @@ int main() {
         PQfinish(conn);
 
         string success = "<html><head><meta charset='UTF-8'></head><body style='font-family:sans-serif; text-align:center; padding-top:50px; direction:rtl;'>"
-                         "<h2 style='color:#28a745;'>✅ تم الحفظ بنجاح!</h2>"
-                         "<p>تم تأمين بيانات العميل (<b>" + name + "</b>) ولن تضيع ياقلبي.</p>"
+                         "<h2 style='color:#28a745;'>✅ تم الحفظ السحابي بنجاح!</h2>"
+                         "<p>تم تأمين بيانات العميل (<b>" + name + "</b>) ولن تضيع نهائياً.</p>"
                          "<br><a href='/' style='background:#007bff; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;'>إضافة معاينة جديدة</a>"
                          "</body></html>";
         res.set_content(success, "text/html; charset=utf-8");
     });
 
+
+
+
+    svr.Get("/tech-view", [](const httplib::Request&, httplib::Response& res) {
+        vector<Inspection> list;
+        PGconn* conn = connect_db();
+        if (PQstatus(conn) == CONNECTION_OK) {
+            string query = "SELECT id, client_name, m_type, width, depth, floors, status FROM inspections ORDER BY id DESC;";
+            PGresult* query_res = PQexec(conn, query.c_str());
+            int rows = PQntuples(query_res);
+            for (int i = 0; i < rows; i++) {
+                Inspection insp;
+                insp.id = stoi(PQgetvalue(query_res, i, 0));
+                insp.client_name = PQgetvalue(query_res, i, 1);
+                insp.m_type = PQgetvalue(query_res, i, 2);
+                insp.width = stoi(PQgetvalue(query_res, i, 3));
+                insp.depth = stoi(PQgetvalue(query_res, i, 4));
+                insp.floors = stof(PQgetvalue(query_res, i, 5));
+                insp.status = PQgetvalue(query_res, i, 6);
+                list.push_back(insp);
+            }
+            PQclear(query_res);
+        }
+        PQfinish(conn);
+
+        ostringstream os;
+        os << "<html><head><meta charset='UTF-8'><style>"
+           << "body{background:#f0f2f5;font-family:sans-serif;padding:20px;direction:rtl;text-align:right;}"
+           << ".box{max-width:800px;margin:auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);}"
+           << "h2{color:#28a745;text-align:center;}table{width:100%;border-collapse:collapse;margin-top:20px;text-align:center;}"
+           << "th,td{padding:12px;border-bottom:1px solid #dee2e6;}th{background:#343a40;color:white;}"
+           << ".btn{background:#17a2b8;color:white;text-decoration:none;padding:6px 12px;border-radius:4px;font-size:14px;}"
+           << "</style></head><body><div class='box'><h2>📋 كشف استعراض المعاينات (للفنيين)</h2>"
+           << "<p style='color:#6c757d;'>تنويه: يمكنك فقط الاطلاع على المقاسات والتقارير ولا تملك صلاحية الحذف.</p>"
+           << "<table><thead><tr><th>رقم</th><th>اسم العميل</th><th>النظام</th><th>الأدوار</th><th>الحالة</th><th>تقرير المقاسات</th></tr></thead><tbody>";
+
+        for (const auto& insp : list) {
+            os << "<tr><td>" << insp.id << "</td>"
+               << "<td><b>" << insp.client_name << "</b></td>"
+               << "<td>" << insp.m_type << "</td>"
+               << "<td>" << insp.floors << "</td>"
+               << "<td><span style='color:#007bff;font-weight:bold;'>" << insp.status << "</span></td>"
+               << "<td><a class='btn' href='/calculate?id=" << insp.id << "&password=tech'>🔍 عرض المقايسة</a></td></tr>";
+        }
+        os << "</tbody></table><br><a href='/'>🔙 العودة لشاشة الإدخال</a></div></body></html>";
+        res.set_content(os.str(), "text/html; charset=utf-8");
+    });
 
     svr.Get("/admin-login", [](const httplib::Request&, httplib::Response& res) {
         string html = "<html><head><meta charset='UTF-8'><style>"
@@ -156,9 +204,12 @@ int main() {
                       "</style></head><body><div class='card'><h2>💼 دخول المدير</h2>"
                       "<form action='/admin' method='get'>"
                       "<input type='password' name='password' placeholder='أدخل الرقم السري' required>"
-                      "<button type='submit'>دخول اللوحة</button></form></div></body></html>";
+                      "<button type='submit'>دخول لوحة التحكم والمسح</button></form></div></body></html>";
         res.set_content(html, "text/html; charset=utf-8");
     });
+
+
+
 
     svr.Get("/admin", [](const httplib::Request& req, httplib::Response& res) {
         string pass = req.get_param_value("password");
@@ -170,9 +221,8 @@ int main() {
         vector<Inspection> list;
         PGconn* conn = connect_db();
         if (PQstatus(conn) == CONNECTION_OK) {
-            string query = "SELECT id, client_name, m_type, width, depth, floors, pit, overhead, status FROM inspections ORDER BY id DESC;";
+            string query = "SELECT id, client_name, m_type, width, depth, floors, status FROM inspections ORDER BY id DESC;";
             PGresult* query_res = PQexec(conn, query.c_str());
-            
             int rows = PQntuples(query_res);
             for (int i = 0; i < rows; i++) {
                 Inspection insp;
@@ -182,9 +232,7 @@ int main() {
                 insp.width = stoi(PQgetvalue(query_res, i, 3));
                 insp.depth = stoi(PQgetvalue(query_res, i, 4));
                 insp.floors = stof(PQgetvalue(query_res, i, 5));
-                insp.pit = stoi(PQgetvalue(query_res, i, 6));
-                insp.overhead = stoi(PQgetvalue(query_res, i, 7));
-                insp.status = PQgetvalue(query_res, i, 8);
+                insp.status = PQgetvalue(query_res, i, 6);
                 list.push_back(insp);
             }
             PQclear(query_res);
@@ -194,23 +242,44 @@ int main() {
         ostringstream os;
         os << "<html><head><meta charset='UTF-8'><style>"
            << "body{background:#f0f2f5;font-family:sans-serif;padding:20px;direction:rtl;text-align:right;}"
-           << ".box{max-width:800px;margin:auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);}"
+           << ".box{max-width:850px;margin:auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);}"
            << "h2{color:#007bff;text-align:center;}table{width:100%;border-collapse:collapse;margin-top:20px;text-align:center;}"
            << "th,td{padding:12px;border-bottom:1px solid #dee2e6;}th{background:#343a40;color:white;}"
-           << ".btn{background:#28a745;color:white;text-decoration:none;padding:6px 12px;border-radius:4px;font-size:14px;}"
-           << "</style></head><body><div class='box'><h2>💼 لوحة تحكم مدير التركيبات (الدائمة)</h2>"
-           << "<table><thead><tr><th>رقم</th><th>اسم العميل</th><th>النظام</th><th>الأدوار</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>";
+           << ".btn{background:#28a745;color:white;text-decoration:none;padding:6px 12px;border-radius:4px;font-size:14px;margin-left:5px;display:inline-block;}"
+           << ".btn-del{background:#dc3545;color:white;text-decoration:none;padding:6px 12px;border-radius:4px;font-size:14px;display:inline-block;}"
+           << "</style></head><body><div class='box'><h2>💼 لوحة تحكم الإدارة العليا والمسح</h2>"
+           << "<table><thead><tr><th>رقم</th><th>اسم العميل</th><th>النظام</th><th>الأدوار</th><th>الحالة</th><th>الإجراءات المتاحة للمدير فقط</th></tr></thead><tbody>";
 
         for (const auto& insp : list) {
             os << "<tr><td>" << insp.id << "</td>"
                << "<td><b>" << insp.client_name << "</b></td>"
                << "<td>" << insp.m_type << "</td>"
                << "<td>" << insp.floors << "</td>"
-               << "<td><span style='color:#fd7e14;font-weight:bold;'>" << insp.status << "</span></td>"
-               << "<td><a class='btn' href='/calculate?id=" << insp.id << "&password=" << pass << "'>📊 مراجعة وحساب</a></td></tr>";
+               << "<td><span style='color:#fd7e14;font-weight:bold;'> " << insp.status << "</span></td>"
+               << "<td>"
+               << "<a class='btn' href='/calculate?id=" << insp.id << "&password=" << pass << "'>📊 مراجعة وحساب</a>"
+               << "<a class='btn-del' href='/delete?id=" << insp.id << "&password=" << pass << "' onclick='return confirm(\"هل أنت متأكد من مسح وإلغلة هذه المعاينة كلياً؟\")'>❌ مسح نهائي</a>"
+               << "</td></tr>";
         }
         os << "</tbody></table><br><a href='/'>← شاشة الفني</a></div></body></html>";
         res.set_content(os.str(), "text/html; charset=utf-8");
+    });
+
+    svr.Get("/delete", [](const httplib::Request& req, httplib::Response& res) {
+        string pass = req.get_param_value("password");
+        if (pass != ADMIN_PASSWORD) {
+            res.set_content("غير مسموح للفنيين بمسح المعاينات", "text/plain; charset=utf-8");
+            return;
+        }
+        string target_id = req.get_param_value("id");
+        PGconn* conn = connect_db();
+        if (PQstatus(conn) == CONNECTION_OK) {
+            string delete_query = "DELETE FROM inspections WHERE id = " + target_id + ";";
+            PGresult* d_res = PQexec(conn, delete_query.c_str());
+            PQclear(d_res);
+        }
+        PQfinish(conn);
+        res.set_redirect("/admin?password=" + pass);
     });
 
     svr.Get("/calculate", [&elevator](const httplib::Request& req, httplib::Response& res) {
@@ -220,10 +289,11 @@ int main() {
 
         PGconn* conn = connect_db();
         if (PQstatus(conn) == CONNECTION_OK) {
-            string update_query = "UPDATE inspections SET status = 'تمت المراجعة والاعتماد' WHERE id = " + target_id + ";";
-            PGresult* u_res = PQexec(conn, update_query.c_str());
-            PQclear(u_res);
-
+            if (pass != "tech") {
+                string update_query = "UPDATE inspections SET status = 'تمت المراجعة والاعتماد' WHERE id = " + target_id + ";";
+                PGresult* u_res = PQexec(conn, update_query.c_str());
+                PQclear(u_res);
+            }
             string query = "SELECT client_name, m_type, width, depth, floors FROM inspections WHERE id = " + target_id + ";";
             PGresult* s_res = PQexec(conn, query.c_str());
             if (PQntuples(s_res) > 0) {
@@ -289,10 +359,13 @@ int main() {
            << "<tr><td>حبال الواير</td><td>" << ropes << " 🧵</td><td>" << c_ropes << " EGP</td></tr>"
            << "<tr><td>لقم السكك</td><td>" << fishplates << " 🗜️</td><td>" << c_fishplates << " EGP</td></tr>"
            << "</tbody></table>"
-           << "<div class='inv'>💰 إجمالي تكلفة البضاعة: " << total << " EGP</div>"
-           << "<center><a href='/admin?password=" << pass << "' style='display:inline-block;margin-top:15px;color:#007bff;text-decoration:none;'>🔙 العودة لجدول المعاينات</a></center>"
-           << "</div></body></html>";
-        
+           << "<div class='inv'>💰 إجمالي تكلفة البضاعة: " << total << " EGP</div>";
+           if (pass == "tech") {
+               os << "<center><a href='/tech-view' style='display:inline-block;margin-top:15px;color:#007bff;text-decoration:none;'>🔙 العودة لجدول الفني</a></center>";
+           } else {
+               os << "<center><a href='/admin?password=" << pass << "' style='display:inline-block;margin-top:15px;color:#007bff;text-decoration:none;'>🔙 العودة لجدول المعاينات للمدير</a></center>";
+           }
+           os << "</div></body></html>";
         res.set_content(os.str(), "text/html; charset=utf-8");
     });
 
@@ -301,8 +374,3 @@ int main() {
     svr.listen("0.0.0.0", port);
     return 0;
 }
-
-
-
-
-
