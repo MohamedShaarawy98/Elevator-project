@@ -20,14 +20,14 @@ struct Inspection {
     string status;
 };
 
-const string ADMIN_PASSWORD = "123"; 
+const string ADMIN_PASSWORD = "13579"; 
 
 class Elevator {
 private:
-    const float P_BRACKET = 150.0;  
-    const float P_BOLT = 15.0;      
-    const float P_ROPE = 80.0;
-    const float P_FISH = 120.0;
+    const float P_BRACKET = 0.0;  
+    const float P_BOLT = 0.0;      
+    const float P_ROPE = 0.0;
+    const float P_FISH = 0.0;
 
 public:
     string get_door_type(int sa) {
@@ -107,16 +107,16 @@ int main() {
                       ".nav-links a{color:#007bff;text-decoration:none;font-size:15px;font-weight:bold;}"
                       "</style></head><body><div class='card'><h2>👷‍♂️ لوحة الفني: الشعراوي بيمسي</h2>"
                       "<form action='/save' method='get'>"
-                      "<div class='f-group'><label>اسم العميل:</label><input type='text' name='c_name' required placeholder='اسم العميل بالكامل'></div>"
+                      "<div class='f-group'><label>اسم العميل:</label><input type='text' name='c_name' required placeholder='اسم العميل '></div>"
                       "<div class='f-group'><label>نوع النظام:</label><select name='m_type'><option value='MR'>بغرفة محرك (MR)</option><option value='MRL'>بدون غرفة محرك (MRL)</option></select></div>"
                       "<div class='f-group'><label>1. عرض البئر (CM):</label><input type='number' name='width' required></div>"
                       "<div class='f-group'><label>2. عمق البئر (CM):</label><input type='number' name='depth' required></div>"
                       "<div class='f-group'><label>3. عدد الأدوار:</label><input type='number' name='floors' required></div>"
                       "<div class='f-group'><label>4. عمق الحفرة (CM):</label><input type='number' name='pit' required></div>"
                       "<div class='f-group'><label>5. الارتفاع العلوي (CM):</label><input type='number' name='overhead' required></div>"
-                      "<button type='submit'>💾 احفظ يافخم</button></form></div>"
-                      "<div class='nav-links'><a href='/tech-view'>📋 المعاينات السابقة</a>"
-                      "<a href='/admin-login'>💚 اتفضل يامدير ←</a></div></body></html>";
+                      "<button type='submit'> احفظ يافخم المعاينة يافخم</button></form></div>"
+                      "<div class='nav-links'><a href='/tech-view'> المعاينات السابقة</a>"
+                      "<a href='/admin-login'> اتفضل يامدير💚 ←</a></div></body></html>";
         res.set_content(html, "text/html; charset=utf-8");
     });
 
