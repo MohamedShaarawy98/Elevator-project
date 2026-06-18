@@ -1,17 +1,27 @@
-# استخدام نسخة نظام Linux مجهزة بـ جامع كود C++
-FROM gcc:latest
+# استخدام بيئة بناء تحتوي على مترجم C++ وثابتة الاستقرار
+FROM ubuntu:22.04
 
-# إنشاء مجلد العمل داخل السيرفر السحابي
-WORKDIR /usr/src/app
+# تجنب طلب أي تداخل من المستخدم أثناء التثبيت
+ENV DEBIAN_FRONTEND=noninteractive
 
-# نسخ ملفات مشروعك بالكامل داخل السيرفر
+# تحديث النظام وتثبيت أدوات المترجم ومكتبة PostgreSQL الهامة
+RUN apt-get update && apt-get install -y \
+    g++ \
+    make \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# تحديد مجلد العمل بداخل السيرفر
+WORKDIR /app
+
+# نسخ ملفات المشروع بالكامل من جيت هاب للسيرفر
 COPY . .
 
-# تجميع كود الـ C++ وربطه بالمكتبات الخاصة بـ Linux
-RUN g++ main.cpp -o app -pthread
+# أمر بناء الكود مع ربط مكتبة postgres (إضافة -lpq و -pthread لضمان عمل السيرفر)
+RUN g++ -O3 main.cpp -o server -lpq -pthread
 
-# فتح بورت الاتصال العالمي للموقع
+# فتح المنفذ الافتراضي
 EXPOSE 8080
 
-# أمر تشغيل الموقع فور انطلاق السيرفر
-CMD ["./app"]
+# أمر تشغيل السيرفر تلقائياً عند الإقلاع
+CMD ["./server"]
