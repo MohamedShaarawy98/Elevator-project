@@ -20,7 +20,7 @@ struct Inspection {
     string status;
 };
 
-const string ADMIN_PASSWORD = "13579"; 
+const string ADMIN_PASSWORD = "135790"; 
 
 class Elevator {
 private:
