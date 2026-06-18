@@ -105,7 +105,7 @@ int main() {
                       "input,select{width:100%;padding:8px;border:1px solid #ced4da;border-radius:6px;box-sizing:border-box;text-align:center;font-size:16px;background:#f8f9fa;}"
                       "button{background:#007bff;color:white;border:none;padding:12px;border-radius:6px;width:100%;font-size:16px;font-weight:bold;cursor:pointer;margin-top:10px;}"
                       "a{display:block;text-align:center;margin-top:15px;color:#6c757d;text-decoration:none;font-size:14px;}"
-                      "</style></head><body><div class='card'><h2> لوحة الفني: رفع معاية</h2>"
+                      "</style></head><body><div class='card'><h2> لوحة الفني: الشعراوي بيمسي</h2>"
                       "<form action='/save' method='get'>"
                       "<div class='f-group'><label>اسم العميل:</label><input type='text' name='c_name' required placeholder='اسم العميل بالكامل'></div>"
                       "<div class='f-group'><label>نوع النظام:</label><select name='m_type'><option value='MR'>بغرفة محرك (MR)</option><option value='MRL'>بدون غرفة محرك (MRL)</option></select></div>"
