@@ -4,7 +4,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <vector>
-#include <postgresql/libpq-fe.h> // المكتبة الرسمية للربط مع PostgreSQL
+#include <postgresql/libpq-fe.h>
 
 using namespace std;
 
@@ -20,7 +20,6 @@ struct Inspection {
     string status;
 };
 
-// الرقم السري لمدير التركيبات (يمكنك تغييره هنا)
 const string ADMIN_PASSWORD = "123"; 
 
 class Elevator {
@@ -67,8 +66,6 @@ public:
     float get_p_rope() { return P_ROPE; }
     float get_p_fish() { return P_FISH; }
 };
-
-// دالة الاتصال بقاعدة البيانات وجلب الرابط ديناميكياً من Render
 PGconn* connect_db() {
     const char* db_url = getenv("DATABASE_URL");
     if (!db_url) {
@@ -99,7 +96,6 @@ int main() {
     httplib::Server svr;
     Elevator elevator;
 
-    // 1. واجهة الفني لرفع المقاسات وإدخال اسم العميل
     svr.Get("/", [](const httplib::Request&, httplib::Response& res) {
         string html = "<html><head><meta charset='UTF-8'><style>"
                       "body{background:#f0f2f5;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}"
@@ -123,7 +119,6 @@ int main() {
         res.set_content(html, "text/html; charset=utf-8");
     });
 
-    // 2. معالجة الحفظ في PostgreSQL
     svr.Get("/save", [](const httplib::Request& req, httplib::Response& res) {
         string name = req.get_param_value("c_name");
         string m_type = req.get_param_value("m_type");
@@ -151,7 +146,7 @@ int main() {
         res.set_content(success, "text/html; charset=utf-8");
     });
 
-    // 3. صفحة تسجيل دخول المدير
+
     svr.Get("/admin-login", [](const httplib::Request&, httplib::Response& res) {
         string html = "<html><head><meta charset='UTF-8'><style>"
                       "body{background:#f0f2f5;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}"
@@ -165,7 +160,6 @@ int main() {
         res.set_content(html, "text/html; charset=utf-8");
     });
 
-    // 4. لوحة تحكم المدير لقراءة البيانات من السحاب
     svr.Get("/admin", [](const httplib::Request& req, httplib::Response& res) {
         string pass = req.get_param_value("password");
         if (pass != ADMIN_PASSWORD) {
@@ -186,3 +180,129 @@ int main() {
                 insp.client_name = PQgetvalue(query_res, i, 1);
                 insp.m_type = PQgetvalue(query_res, i, 2);
                 insp.width = stoi(PQgetvalue(query_res, i, 3));
+                insp.depth = stoi(PQgetvalue(query_res, i, 4));
+                insp.floors = stof(PQgetvalue(query_res, i, 5));
+                insp.pit = stoi(PQgetvalue(query_res, i, 6));
+                insp.overhead = stoi(PQgetvalue(query_res, i, 7));
+                insp.status = PQgetvalue(query_res, i, 8);
+                list.push_back(insp);
+            }
+            PQclear(query_res);
+        }
+        PQfinish(conn);
+
+        ostringstream os;
+        os << "<html><head><meta charset='UTF-8'><style>"
+           << "body{background:#f0f2f5;font-family:sans-serif;padding:20px;direction:rtl;text-align:right;}"
+           << ".box{max-width:800px;margin:auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);}"
+           << "h2{color:#007bff;text-align:center;}table{width:100%;border-collapse:collapse;margin-top:20px;text-align:center;}"
+           << "th,td{padding:12px;border-bottom:1px solid #dee2e6;}th{background:#343a40;color:white;}"
+           << ".btn{background:#28a745;color:white;text-decoration:none;padding:6px 12px;border-radius:4px;font-size:14px;}"
+           << "</style></head><body><div class='box'><h2>💼 لوحة تحكم مدير التركيبات (الدائمة)</h2>"
+           << "<table><thead><tr><th>رقم</th><th>اسم العميل</th><th>النظام</th><th>الأدوار</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>";
+
+        for (const auto& insp : list) {
+            os << "<tr><td>" << insp.id << "</td>"
+               << "<td><b>" << insp.client_name << "</b></td>"
+               << "<td>" << insp.m_type << "</td>"
+               << "<td>" << insp.floors << "</td>"
+               << "<td><span style='color:#fd7e14;font-weight:bold;'>" << insp.status << "</span></td>"
+               << "<td><a class='btn' href='/calculate?id=" << insp.id << "&password=" << pass << "'>📊 مراجعة وحساب</a></td></tr>";
+        }
+        os << "</tbody></table><br><a href='/'>← شاشة الفني</a></div></body></html>";
+        res.set_content(os.str(), "text/html; charset=utf-8");
+    });
+
+    svr.Get("/calculate", [&elevator](const httplib::Request& req, httplib::Response& res) {
+        string target_id = req.get_param_value("id");
+        string pass = req.get_param_value("password");
+        Inspection insp;
+
+        PGconn* conn = connect_db();
+        if (PQstatus(conn) == CONNECTION_OK) {
+            string update_query = "UPDATE inspections SET status = 'تمت المراجعة والاعتماد' WHERE id = " + target_id + ";";
+            PGresult* u_res = PQexec(conn, update_query.c_str());
+            PQclear(u_res);
+
+            string query = "SELECT client_name, m_type, width, depth, floors FROM inspections WHERE id = " + target_id + ";";
+            PGresult* s_res = PQexec(conn, query.c_str());
+            if (PQntuples(s_res) > 0) {
+                insp.client_name = PQgetvalue(s_res, 0, 0);
+                insp.m_type = PQgetvalue(s_res, 0, 1);
+                insp.width = stoi(PQgetvalue(s_res, 0, 2));
+                insp.depth = stoi(PQgetvalue(s_res, 0, 3));
+                insp.floors = stof(PQgetvalue(s_res, 0, 4));
+            }
+            PQclear(s_res);
+        }
+        PQfinish(conn);
+
+        string m_type = insp.m_type;
+        int w = insp.width;
+        int d = insp.depth;
+        float f = insp.floors;
+
+        string door = elevator.get_door_type(w);
+        int cabin_dbg = elevator.get_cabin_dbg(w);
+        int cwt_dbg = elevator.get_cwt_dbg(w);
+        int cab_w = elevator.get_cabin_width(w);
+        int cab_d = elevator.get_cabin_depth(d);
+        float h = elevator.get_shaft_height(f, m_type);
+
+        int brackets = elevator.calc_brackets(h);
+        int bolts = elevator.calc_bolts(brackets);
+        float ropes = elevator.calc_ropes(h);
+        int fishplates = ((int)f) * 4;
+
+        float c_brackets = brackets * elevator.get_p_bracket();
+        float c_bolts = bolts * elevator.get_p_bolt();
+        float c_ropes = ropes * elevator.get_p_rope();
+        float c_fishplates = fishplates * elevator.get_p_fish();
+        float total = c_brackets + c_bolts + c_ropes + c_fishplates;
+
+        ostringstream os;
+        os << "<html><head><meta charset='UTF-8'><style>"
+           << "body{background:#f0f2f5;font-family:sans-serif;padding:20px;direction:rtl;text-align:right;}"
+           << ".box{max-width:600px;margin:auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);}"
+           << "h2{color:#007bff;text-align:center;}h3{color:#495057;border-bottom:2px solid #dee2e6;padding-bottom:4px;}"
+           << ".tbl{width:100%;border-collapse:collapse;margin-top:10px;direction:ltr;text-align:left;}"
+           << ".tbl th{background:#f8f9fa;padding:8px;border-bottom:1px solid #dee2e6;width:35%;}"
+           << ".tbl td{padding:8px;border-bottom:1px solid #dee2e6;}"
+           << ".btbl{width:100%;border-collapse:collapse;margin-top:10px;text-align:center;}"
+           << ".btbl th{background:#343a40;color:white;padding:8px;}.btbl td{padding:8px;border-bottom:1px solid #dee2e6;}"
+           << ".inv{background:#e2f0d9;padding:15px;border-radius:8px;border:2px dashed #385723;margin-top:15px;text-align:center;font-size:18px;font-weight:bold;color:#385723;}"
+           << "</style></head><body><div class='box'><h2>📋 تقرير مراجعة المقايسة المعتمدة سحابياً</h2>"
+           << "<p style='text-align:center;font-weight:bold;font-size:18px;color:#2b5797;'>العميل: " << insp.client_name << "</p>"
+           << "<h3>📐 أولاً: الأبعاد الهندسية</h3>"
+           << "<table class='tbl'>"
+           << "<tr><th>* Door Type:</th><td>" << door << "</td></tr>"
+           << "<tr><th>* Cabin DBG:</th><td><b>" << cabin_dbg << " CM</b></td></tr>"
+           << "<tr><th>* CWT DBG:</th><td><b>" << (cwt_dbg == 0 ? "Review Official" : to_string(cwt_dbg) + " CM") << "</b></td></tr>"
+           << "<tr><th>* Cabin Width:</th><td><b>" << cab_w << " CM</b></td></tr>"
+           << "<tr><th>* Cabin Depth:</th><td><b>" << cab_d << " CM</b></td></tr>"
+           << "<tr><th>* Shaft Height:</th><td style='color:#fd7e14;font-weight:bold;'>" << h << " Meters</td></tr>"
+           << "</table>"
+           << "<h3>📦 ثانياً: البضاعة والتكلفة المالية المحسوبة</h3>"
+           << "<table class='btbl'><thead><tr><th>اسم الصنف</th><th>الكمية</th><th> التكلفة</th></tr></thead><tbody>"
+           << "<tr><td>كوابيل السكك</td><td>" << brackets << " 🛑</td><td>" << c_brackets << " EGP</td></tr>"
+           << "<tr><td>مسامير التثبيت</td><td>" << bolts << " 🔩</td><td>" << c_bolts << " EGP</td></tr>"
+           << "<tr><td>حبال الواير</td><td>" << ropes << " 🧵</td><td>" << c_ropes << " EGP</td></tr>"
+           << "<tr><td>لقم السكك</td><td>" << fishplates << " 🗜️</td><td>" << c_fishplates << " EGP</td></tr>"
+           << "</tbody></table>"
+           << "<div class='inv'>💰 إجمالي تكلفة البضاعة: " << total << " EGP</div>"
+           << "<center><a href='/admin?password=" << pass << "' style='display:inline-block;margin-top:15px;color:#007bff;text-decoration:none;'>🔙 العودة لجدول المعاينات</a></center>"
+           << "</div></body></html>";
+        
+        res.set_content(os.str(), "text/html; charset=utf-8");
+    });
+
+    const char* port_env = getenv("PORT");
+    int port = port_env ? stoi(port_env) : 8080;
+    svr.listen("0.0.0.0", port);
+    return 0;
+}
+
+
+
+
+
