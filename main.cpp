@@ -114,7 +114,7 @@ int main() {
                       "<div class='f-group'><label>3. عدد الأدوار:</label><input type='number' name='floors' required></div>"
                       "<div class='f-group'><label>4. عمق الحفرة (CM):</label><input type='number' name='pit' required></div>"
                       "<div class='f-group'><label>5. الارتفاع العلوي (CM):</label><input type='number' name='overhead' required></div>"
-                      "<button type='submit'> احفظ يافخم المعاينة يافخم</button></form></div>"
+                      "<button type='submit'> احفظ المعاينة يافخم</button></form></div>"
                       "<div class='nav-links'><a href='/tech-view'> المعاينات السابقة</a>"
                       "<a href='/admin-login'> اتفضل يامدير💚 ←</a></div></body></html>";
         res.set_content(html, "text/html; charset=utf-8");
@@ -141,7 +141,7 @@ int main() {
 
         string success = "<html><head><meta charset='UTF-8'></head><body style='font-family:sans-serif; text-align:center; padding-top:50px; direction:rtl;'>"
                          "<h2 style='color:#28a745;'>البتاع اتحفظ ياخويا </h2>"
-                         "<p>بيانات العميل سر كبير☺️ (<b>" + name + "</b>) ومش هيضيع خالص😂 .</p>"
+                         "<p>بيانات العميل ☺️ (<b>" + name + "</b>) سر كبير ومش هيضيع خالص😂 .</p>"
                          "<br><a href='/' style='background:#007bff; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;'>إضافة معاينة جديدة</a>"
                          "</body></html>";
         res.set_content(success, "text/html; charset=utf-8");
