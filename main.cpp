@@ -4,11 +4,10 @@
 #include <sstream>
 #include <cstdlib>
 #include <vector>
-#include <sqlite3.h> // مكتبة قاعدة البيانات الدائمة
+#include <postgresql/libpq-fe.h> // المكتبة الرسمية للربط مع PostgreSQL
 
 using namespace std;
 
-// هيكل البيانات لقراءة المعاينات من قاعدة البيانات
 struct Inspection {
     int id;
     string client_name;
@@ -69,25 +68,38 @@ public:
     float get_p_fish() { return P_FISH; }
 };
 
-// دالة مساعدة لإنشاء الجدول في بداية تشغيل البرنامج
+// دالة الاتصال بقاعدة البيانات وجلب الرابط ديناميكياً من Render
+PGconn* connect_db() {
+    const char* db_url = getenv("DATABASE_URL");
+    if (!db_url) {
+        db_url = "postgresql://postgres:password@localhost:5432/elevator_db";
+    }
+    PGconn* conn = PQconnectdb(db_url);
+    if (PQstatus(conn) != CONNECTION_OK) {
+        cerr << "Database Connection Failed: " << PQerrorMessage(conn) << endl;
+    }
+    return conn;
+}
+
 void init_database() {
-    sqlite3* db;
-    if (sqlite3_open("elevators.db", &db) == SQLITE_OK) {
+    PGconn* conn = connect_db();
+    if (PQstatus(conn) == CONNECTION_OK) {
         string query = "CREATE TABLE IF NOT EXISTS inspections ("
-                       "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                       "id SERIAL PRIMARY KEY, "
                        "client_name TEXT, m_type TEXT, width INTEGER, depth INTEGER, "
                        "floors REAL, pit INTEGER, overhead INTEGER, status TEXT);";
-        sqlite3_exec(db, query.c_str(), 0, 0, 0);
+        PGresult* res = PQexec(conn, query.c_str());
+        PQclear(res);
     }
-    sqlite3_close(db);
+    PQfinish(conn);
 }
 
 int main() {
-    init_database(); // تجهيز قاعدة البيانات تلقائياً
+    init_database(); 
     httplib::Server svr;
     Elevator elevator;
 
-    // 1. واجهة الفني لرفع المقاسات
+    // 1. واجهة الفني لرفع المقاسات وإدخال اسم العميل
     svr.Get("/", [](const httplib::Request&, httplib::Response& res) {
         string html = "<html><head><meta charset='UTF-8'><style>"
                       "body{background:#f0f2f5;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}"
@@ -97,57 +109,43 @@ int main() {
                       "input,select{width:100%;padding:8px;border:1px solid #ced4da;border-radius:6px;box-sizing:border-box;text-align:center;font-size:16px;background:#f8f9fa;}"
                       "button{background:#007bff;color:white;border:none;padding:12px;border-radius:6px;width:100%;font-size:16px;font-weight:bold;cursor:pointer;margin-top:10px;}"
                       "a{display:block;text-align:center;margin-top:15px;color:#6c757d;text-decoration:none;font-size:14px;}"
-                      "</style></head><body><div class='card'><h2>👷‍♂️ لوحة الفني: رفع معاينة</h2>"
+                      "</style></head><body><div class='card'><h2>👷‍♂️ لوحة الفني: رفع معاينة (سحابي)</h2>"
                       "<form action='/save' method='get'>"
-                      "<div class='f-group'><label>اسم العميل:</label><input type='text' name='c_name' required placeholder='أدخل اسم العميل بالكامل'></div>"
+                      "<div class='f-group'><label>اسم العميل:</label><input type='text' name='c_name' required placeholder='اسم العميل بالكامل'></div>"
                       "<div class='f-group'><label>نوع النظام:</label><select name='m_type'><option value='MR'>بغرفة محرك (MR)</option><option value='MRL'>بدون غرفة محرك (MRL)</option></select></div>"
                       "<div class='f-group'><label>1. عرض البئر (CM):</label><input type='number' name='width' required></div>"
                       "<div class='f-group'><label>2. عمق البئر (CM):</label><input type='number' name='depth' required></div>"
                       "<div class='f-group'><label>3. عدد الأدوار:</label><input type='number' name='floors' required></div>"
                       "<div class='f-group'><label>4. عمق الحفرة (CM):</label><input type='number' name='pit' required></div>"
                       "<div class='f-group'><label>5. الارتفاع العلوي (CM):</label><input type='number' name='overhead' required></div>"
-                      "<button type='submit'>💾 حفظ المقاسات وإرسال للمراجعة</button></form>"
+                      "<button type='submit'>💾 حفظ في قاعدة البيانات السحابية</button></form>"
                       "<a href='/admin-login'>💼 دخول مدير التركيبات ←</a></div></body></html>";
         res.set_content(html, "text/html; charset=utf-8");
     });
 
-    // 2. حفظ البيانات في ملف SQLite
+    // 2. معالجة الحفظ في PostgreSQL
     svr.Get("/save", [](const httplib::Request& req, httplib::Response& res) {
-        if (!req.has_param("c_name") || !req.has_param("width") || !req.has_param("depth")) {
-            res.set_content("خطأ في البيانات", "text/plain; charset=utf-8");
-            return;
-        }
-
         string name = req.get_param_value("c_name");
         string m_type = req.get_param_value("m_type");
-        int width = stoi(req.get_param_value("width"));
-        int depth = stoi(req.get_param_value("depth"));
-        float floors = stof(req.get_param_value("floors"));
-        int pit = stoi(req.get_param_value("pit"));
-        int overhead = stoi(req.get_param_value("overhead"));
+        string width = req.get_param_value("width");
+        string depth = req.get_param_value("depth");
+        string floors = req.get_param_value("floors");
+        string pit = req.get_param_value("pit");
+        string overhead = req.get_param_value("overhead");
         string status = "قيد المراجعة";
 
-        sqlite3* db;
-        if (sqlite3_open("elevators.db", &db) == SQLITE_OK) {
-            string query = "INSERT INTO inspections (client_name, m_type, width, depth, floors, pit, overhead, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
-            sqlite3_stmt* stmt;
-            sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, 0);
-            sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
-            sqlite3_bind_text(stmt, 2, m_type.c_str(), -1, SQLITE_TRANSIENT);
-            sqlite3_bind_int(stmt, 3, width);
-            sqlite3_bind_int(stmt, 4, depth);
-            sqlite3_bind_double(stmt, 5, floors);
-            sqlite3_bind_int(stmt, 6, pit);
-            sqlite3_bind_int(stmt, 7, overhead);
-            sqlite3_bind_text(stmt, 8, status.c_str(), -1, SQLITE_TRANSIENT);
-            sqlite3_step(stmt);
-            sqlite3_finalize(stmt);
+        PGconn* conn = connect_db();
+        if (PQstatus(conn) == CONNECTION_OK) {
+            const char* paramValues[8] = { name.c_str(), m_type.c_str(), width.c_str(), depth.c_str(), floors.c_str(), pit.c_str(), overhead.c_str(), status.c_str() };
+            string query = "INSERT INTO inspections (client_name, m_type, width, depth, floors, pit, overhead, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);";
+            PGresult* insert_res = PQexecParams(conn, query.c_str(), 8, NULL, paramValues, NULL, NULL, 0);
+            PQclear(insert_res);
         }
-        sqlite3_close(db);
+        PQfinish(conn);
 
         string success = "<html><head><meta charset='UTF-8'></head><body style='font-family:sans-serif; text-align:center; padding-top:50px; direction:rtl;'>"
-                         "<h2 style='color:#28a745;'>✅ تم حفظ المعاينة بشكل دائم!</h2>"
-                         "<p>تم إرسال معاينة العميل (<b>" + name + "</b>) إلى الإدارة.</p>"
+                         "<h2 style='color:#28a745;'>✅ تم الحفظ السحابي بنجاح!</h2>"
+                         "<p>تم تأمين بيانات العميل (<b>" + name + "</b>) ولن تضيع نهائياً.</p>"
                          "<br><a href='/' style='background:#007bff; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;'>إضافة معاينة جديدة</a>"
                          "</body></html>";
         res.set_content(success, "text/html; charset=utf-8");
@@ -167,17 +165,24 @@ int main() {
         res.set_content(html, "text/html; charset=utf-8");
     });
 
-    // 4. لوحة تحكم المدير (تتحقق من الرقم السري وتقرأ من قاعدة البيانات)
+    // 4. لوحة تحكم المدير لقراءة البيانات من السحاب
     svr.Get("/admin", [](const httplib::Request& req, httplib::Response& res) {
         string pass = req.get_param_value("password");
         if (pass != ADMIN_PASSWORD) {
-            res.set_content("<html><head><meta charset='UTF-8'></head><body style='text-align:center;padding-top:50px;'><h2>❌ الرقم السري خاطئ!</h2><a href='/admin-login'>حاول مجدداً</a></body></html>", "text/html; charset=utf-8");
+            res.set_content("<html><head><meta charset='UTF-8'></head><body style='text-align:center;padding-top:50px;'><h2>❌ الرقم السري خاطئ!</h2></body></html>", "text/html; charset=utf-8");
             return;
         }
 
         vector<Inspection> list;
-        sqlite3* db;
-        if (sqlite3_open("elevators.db", &db) == SQLITE_OK) {
-            sqlite3_stmt* stmt;
+        PGconn* conn = connect_db();
+        if (PQstatus(conn) == CONNECTION_OK) {
             string query = "SELECT id, client_name, m_type, width, depth, floors, pit, overhead, status FROM inspections ORDER BY id DESC;";
-            if (sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, 0) == SQLITE_OK) {
+            PGresult* query_res = PQexec(conn, query.c_str());
+            
+            int rows = PQntuples(query_res);
+            for (int i = 0; i < rows; i++) {
+                Inspection insp;
+                insp.id = stoi(PQgetvalue(query_res, i, 0));
+                insp.client_name = PQgetvalue(query_res, i, 1);
+                insp.m_type = PQgetvalue(query_res, i, 2);
+                insp.width = stoi(PQgetvalue(query_res, i, 3));
