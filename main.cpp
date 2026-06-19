@@ -24,6 +24,7 @@ const string ADMIN_PASSWORD = "135790";
 
 class Elevator {
 private:
+    // ملاحظة: يمكنك تغيير هذه القيم لاحقاً أو جعلها ديناميكية من قاعدة البيانات
     const float P_BRACKET = 150.0;  
     const float P_BOLT = 25.0;      
     const float P_ROPE = 80.0;
@@ -31,6 +32,7 @@ private:
 
 public:
     string get_door_type(int sa) {
+        // ترتيب تنازلي باستخدام else if لمنع تداخل المقاسات واختيار أدق باب
         if (sa >= 191 && sa <= 210) return "Auto 90 CO";
         else if (sa > 168 && sa <= 190)  return "Auto 80 CO";
         else if (sa >= 157 && sa <= 168) return "Auto 70 CO";
@@ -95,17 +97,17 @@ int main() {
     httplib::Server svr;
     Elevator elevator;
 
-    // 1. شاشة الإدخال الرئيسية (تم تكبير الأبعاد والخطوط هنا)
+    // شاشة الفني الرئيسية
     svr.Get("/", [](const httplib::Request&, httplib::Response& res) {
         string html = "<html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>"
                       "body{background:#f0f2f5;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box;flex-direction:column;}"
-                      ".card{background:white;padding:35px;border-radius:16px;box-shadow:0 6px 20px rgba(0,0,0,0.1);width:90%;max-width:600px;direction:rtl;text-align:right;box-sizing:border-box;}"
-                      "h2{color:#28a745;text-align:center;margin-bottom:25px;font-size:26px;}.f-group{margin-bottom:10px;}"
-                      "label{font-weight:600;color:#495057;display:block;margin-bottom:6px;font-size:16px;}"
-                      "input,select{width:100%;padding:12px;border:1px solid #ced4da;border-radius:8px;box-sizing:border-box;text-align:center;font-size:18px;background:#f8f9fa;}"
-                      "button{background:#007bff;color:white;border:none;padding:15px;border-radius:8px;width:100%;font-size:18px;font-weight:bold;cursor:pointer;margin-top:20px;}"
-                      ".nav-links{display:flex;justify-content:space-between;width:90%;max-width:600px;margin-top:20px;direction:rtl;}"
-                      ".nav-links a{color:#007bff;text-decoration:none;font-size:18px;font-weight:bold;}"
+                      ".card{background:white;padding:25px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);width:100%;max-width:400px;direction:rtl;text-align:right;box-sizing:border-box;}"
+                      "h2{color:#28a745;text-align:center;margin-bottom:15px;}.f-group{margin-bottom:10px;}"
+                      "label{font-weight:600;color:#495057;display:block;margin-bottom:4px;font-size:14px;}"
+                      "input,select{width:100%;padding:8px;border:1px solid #ced4da;border-radius:6px;box-sizing:border-box;text-align:center;font-size:16px;background:#f8f9fa;}"
+                      "button{background:#007bff;color:white;border:none;padding:12px;border-radius:6px;width:100%;font-size:16px;font-weight:bold;cursor:pointer;margin-top:10px;}"
+                      ".nav-links{display:flex;justify-content:space-between;width:100%;max-width:400px;margin-top:15px;direction:rtl;}"
+                      ".nav-links a{color:#007bff;text-decoration:none;font-size:15px;font-weight:bold;}"
                       "</style></head><body><div class='card'><h2>👷‍♂️ لوحة الفني: الشعراوي بيمسي</h2>"
                       "<form action='/save' method='get'>"
                       "<div class='f-group'><label>اسم العميل:</label><input type='text' name='c_name' required placeholder='اسم العميل '></div>"
@@ -121,7 +123,7 @@ int main() {
         res.set_content(html, "text/html; charset=utf-8");
     });
 
-    // 2. حفظ المعاينة بشكل آمن
+    // حفظ المعاينة بأمان
     svr.Get("/save", [](const httplib::Request& req, httplib::Response& res) {
         string name = req.get_param_value("c_name");
         string m_type = req.get_param_value("m_type");
@@ -149,7 +151,7 @@ int main() {
         res.set_content(success, "text/html; charset=utf-8");
     });
 
-    // 3. جدول عرض الفني للمعاينات السابقة (يدعم سكرول للموبايل)
+    // عرض الفني للمعاينات السابقة
     svr.Get("/tech-view", [](const httplib::Request&, httplib::Response& res) {
         vector<Inspection> list;
         PGconn* conn = connect_db();
@@ -179,7 +181,7 @@ int main() {
            << "h2{color:#28a745;text-align:center;}table{width:100%;border-collapse:collapse;margin-top:20px;text-align:center;}"
            << "th,td{padding:12px;border-bottom:1px solid #dee2e6;}th{background:#343a40;color:white;}"
            << ".btn{background:#17a2b8;color:white;text-decoration:none;padding:6px 12px;border-radius:4px;font-size:14px;}"
-           << ".table-container{width:100%; overflow-x:auto;}"
+           << ".table-container{width:100%; overflow-x:auto;}" // حاوية السكرول للموبايل
            << "</style></head><body><div class='box'><h2>📋 راجع ع المعاينة ياخويا قبل ميتخصم عليك</h2>"
            << "<p style='color:#6c757d;'>تنويه: يمكنك فقط الاطلاع على المقاسات والتقارير ولا تملك صلاحية الحذف.</p>"
            << "<div class='table-container'><table><thead><tr><th>رقم</th><th>اسم العميل</th><th>النظام</th><th>الأدوار</th><th>الحالة</th><th>تقرير المقاسات</th></tr></thead><tbody>";
@@ -196,7 +198,7 @@ int main() {
         res.set_content(os.str(), "text/html; charset=utf-8");
     });
 
-    // 4. صفحة دخول المدير بـ POST لحماية الباسورد
+    // صفحة دخول المدير المعدلة بـ POST لحماية الباسورد
     svr.Get("/admin-login", [](const httplib::Request&, httplib::Response& res) {
         string html = "<html><head><meta charset='UTF-8'><style>"
                       "body{background:#f0f2f5;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}"
@@ -204,13 +206,13 @@ int main() {
                       "input{width:100%;padding:10px;margin:10px 0;border:1px solid #ced4da;border-radius:6px;box-sizing:border-box;font-size:16px;text-align:center;}"
                       "button{background:#343a40;color:white;border:none;padding:12px;border-radius:6px;width:100%;font-size:16px;cursor:pointer;}"
                       "</style></head><body><div class='card'><h2>💼 دخول المدير</h2>"
-                      "<form action='/admin' method='post'>"
+                      "<form action='/admin' method='post'>" // تغيير لـ POST
                       "<input type='password' name='password' placeholder='أدخل الرقم السري' required>"
                       "<button type='submit'>دخول لوحة التحكم والمسح</button></form></div></body></html>";
         res.set_content(html, "text/html; charset=utf-8");
     });
 
-    // 5. لوحة التحكم للمدير عبر POST لحماية البيانات وثغرات الـ SQL Injection
+    // استقبال لوحة التحكم عبر POST لمنع تسريب الباسورد في الرابط
     svr.Post("/admin", [](const httplib::Request& req, httplib::Response& res) {
         string pass = req.get_param_value("password");
         if (pass != ADMIN_PASSWORD) {
@@ -266,11 +268,12 @@ int main() {
         res.set_content(os.str(), "text/html; charset=utf-8");
     });
 
+    // لتسهيل الرجوع من الحذف بشكل آمن
     svr.Get("/admin", [](const httplib::Request&, httplib::Response& res) {
         res.set_redirect("/admin-login");
     });
 
-    // 6. حذف معاينة بأمان (Parameterized Query)
+    // دالة حذف آمنة ومحمية من الـ SQL Injection
     svr.Get("/delete", [](const httplib::Request& req, httplib::Response& res) {
         string target_id = req.get_param_value("id");
         PGconn* conn = connect_db();
@@ -281,10 +284,11 @@ int main() {
             PQclear(d_res);
         }
         PQfinish(conn);
+        // إعادة التوجيه لشاشة الدخول كنوع من الأمان
         res.set_redirect("/admin-login");
     });
 
-    // 7. حساب ومراجعة المقايسة بأمان هندسي وأمني
+    // دالة حساب آمنة ومحمية بالكامل
     svr.Get("/calculate", [&elevator](const httplib::Request& req, httplib::Response& res) {
         string target_id = req.get_param_value("id");
         string role = req.get_param_value("role");
