@@ -24,25 +24,25 @@ const string ADMIN_PASSWORD = "135790";
 
 class Elevator {
 private:
-    const float P_BRACKET = 0.0;  
-    const float P_BOLT = 0.0;      
-    const float P_ROPE = 0.0;
-    const float P_FISH = 0.0;
+    // ملاحظة: يمكنك تغيير هذه القيم لاحقاً أو جعلها ديناميكية من قاعدة البيانات
+    const float P_BRACKET = 150.0;  
+    const float P_BOLT = 25.0;      
+    const float P_ROPE = 80.0;
+    const float P_FISH = 45.0;
 
 public:
     string get_door_type(int sa) {
-        string d = "";
-        if (sa >= 105 && sa <= 120) d += "Semi Auto 70 / ";
-        if (sa >= 121 && sa <= 135) d += "Semi Auto 80 / ";
-        if (sa >= 128 && sa < 144)  d += "Auto 70 SI / ";
-        if (sa >= 144 && sa <= 160) d += "Auto 80 SI / ";
-        if (sa >= 158 && sa <= 175) d += "Auto 90 SI / ";
-        if (sa >= 175 && sa <= 200) d += "Auto 100 SI / ";
-        if (sa >= 157 && sa <= 168) d += "Auto 70 CO / ";
-        if (sa > 168 && sa <= 190)  d += "Auto 80 CO / ";
-        if (sa > 190 && sa <= 210)  d += "Auto 90 CO / ";
-        if (d == "") return "No standard door";
-        return d.substr(0, d.length() - 3);
+        // ترتيب تنازلي باستخدام else if لمنع تداخل المقاسات واختيار أدق باب
+        if (sa >= 191 && sa <= 210) return "Auto 90 CO";
+        else if (sa > 168 && sa <= 190)  return "Auto 80 CO";
+        else if (sa >= 157 && sa <= 168) return "Auto 70 CO";
+        else if (sa >= 175 && sa <= 200) return "Auto 100 SI";
+        else if (sa >= 158 && sa <= 175) return "Auto 90 SI";
+        else if (sa >= 144 && sa <= 160) return "Auto 80 SI";
+        else if (sa >= 128 && sa < 144)  return "Auto 70 SI";
+        else if (sa >= 121 && sa <= 135) return "Semi Auto 80";
+        else if (sa >= 105 && sa <= 120) return "Semi Auto 70";
+        return "No standard door";
     }
 
     int get_cabin_dbg(int w) { return w - 30; }
@@ -66,6 +66,7 @@ public:
     float get_p_rope() { return P_ROPE; }
     float get_p_fish() { return P_FISH; }
 };
+
 PGconn* connect_db() {
     const char* db_url = getenv("DATABASE_URL");
     if (!db_url) {
@@ -90,13 +91,15 @@ void init_database() {
     }
     PQfinish(conn);
 }
+
 int main() {
     init_database(); 
     httplib::Server svr;
     Elevator elevator;
 
+    // شاشة الفني الرئيسية
     svr.Get("/", [](const httplib::Request&, httplib::Response& res) {
-        string html = "<html><head><meta charset='UTF-8'><style>"
+        string html = "<html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>"
                       "body{background:#f0f2f5;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box;flex-direction:column;}"
                       ".card{background:white;padding:25px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);width:100%;max-width:400px;direction:rtl;text-align:right;box-sizing:border-box;}"
                       "h2{color:#28a745;text-align:center;margin-bottom:15px;}.f-group{margin-bottom:10px;}"
@@ -120,6 +123,7 @@ int main() {
         res.set_content(html, "text/html; charset=utf-8");
     });
 
+    // حفظ المعاينة بأمان
     svr.Get("/save", [](const httplib::Request& req, httplib::Response& res) {
         string name = req.get_param_value("c_name");
         string m_type = req.get_param_value("m_type");
@@ -147,9 +151,7 @@ int main() {
         res.set_content(success, "text/html; charset=utf-8");
     });
 
-
-
-
+    // عرض الفني للمعاينات السابقة
     svr.Get("/tech-view", [](const httplib::Request&, httplib::Response& res) {
         vector<Inspection> list;
         PGconn* conn = connect_db();
@@ -173,15 +175,16 @@ int main() {
         PQfinish(conn);
 
         ostringstream os;
-        os << "<html><head><meta charset='UTF-8'><style>"
+        os << "<html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>"
            << "body{background:#f0f2f5;font-family:sans-serif;padding:20px;direction:rtl;text-align:right;}"
            << ".box{max-width:800px;margin:auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);}"
            << "h2{color:#28a745;text-align:center;}table{width:100%;border-collapse:collapse;margin-top:20px;text-align:center;}"
            << "th,td{padding:12px;border-bottom:1px solid #dee2e6;}th{background:#343a40;color:white;}"
            << ".btn{background:#17a2b8;color:white;text-decoration:none;padding:6px 12px;border-radius:4px;font-size:14px;}"
+           << ".table-container{width:100%; overflow-x:auto;}" // حاوية السكرول للموبايل
            << "</style></head><body><div class='box'><h2>📋 راجع ع المعاينة ياخويا قبل ميتخصم عليك</h2>"
            << "<p style='color:#6c757d;'>تنويه: يمكنك فقط الاطلاع على المقاسات والتقارير ولا تملك صلاحية الحذف.</p>"
-           << "<table><thead><tr><th>رقم</th><th>اسم العميل</th><th>النظام</th><th>الأدوار</th><th>الحالة</th><th>تقرير المقاسات</th></tr></thead><tbody>";
+           << "<div class='table-container'><table><thead><tr><th>رقم</th><th>اسم العميل</th><th>النظام</th><th>الأدوار</th><th>الحالة</th><th>تقرير المقاسات</th></tr></thead><tbody>";
 
         for (const auto& insp : list) {
             os << "<tr><td>" << insp.id << "</td>"
@@ -189,12 +192,13 @@ int main() {
                << "<td>" << insp.m_type << "</td>"
                << "<td>" << insp.floors << "</td>"
                << "<td><span style='color:#007bff;font-weight:bold;'>" << insp.status << "</span></td>"
-               << "<td><a class='btn' href='/calculate?id=" << insp.id << "&password=tech'>🔍 عرض المقايسة</a></td></tr>";
+               << "<td><a class='btn' href='/calculate?id=" << insp.id << "&role=tech'>🔍 عرض المقايسة</a></td></tr>";
         }
-        os << "</tbody></table><br><a href='/'>🔙 العودة لشاشة الإدخال</a></div></body></html>";
+        os << "</tbody></table></div><br><a href='/'>🔙 العودة لشاشة الإدخال</a></div></body></html>";
         res.set_content(os.str(), "text/html; charset=utf-8");
     });
 
+    // صفحة دخول المدير المعدلة بـ POST لحماية الباسورد
     svr.Get("/admin-login", [](const httplib::Request&, httplib::Response& res) {
         string html = "<html><head><meta charset='UTF-8'><style>"
                       "body{background:#f0f2f5;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}"
@@ -202,16 +206,14 @@ int main() {
                       "input{width:100%;padding:10px;margin:10px 0;border:1px solid #ced4da;border-radius:6px;box-sizing:border-box;font-size:16px;text-align:center;}"
                       "button{background:#343a40;color:white;border:none;padding:12px;border-radius:6px;width:100%;font-size:16px;cursor:pointer;}"
                       "</style></head><body><div class='card'><h2>💼 دخول المدير</h2>"
-                      "<form action='/admin' method='get'>"
+                      "<form action='/admin' method='post'>" // تغيير لـ POST
                       "<input type='password' name='password' placeholder='أدخل الرقم السري' required>"
                       "<button type='submit'>دخول لوحة التحكم والمسح</button></form></div></body></html>";
         res.set_content(html, "text/html; charset=utf-8");
     });
 
-
-
-
-    svr.Get("/admin", [](const httplib::Request& req, httplib::Response& res) {
+    // استقبال لوحة التحكم عبر POST لمنع تسريب الباسورد في الرابط
+    svr.Post("/admin", [](const httplib::Request& req, httplib::Response& res) {
         string pass = req.get_param_value("password");
         if (pass != ADMIN_PASSWORD) {
             res.set_content("<html><head><meta charset='UTF-8'></head><body style='text-align:center;padding-top:50px;'><h2>❌ الرقم السري خاطئ!</h2></body></html>", "text/html; charset=utf-8");
@@ -240,15 +242,16 @@ int main() {
         PQfinish(conn);
 
         ostringstream os;
-        os << "<html><head><meta charset='UTF-8'><style>"
+        os << "<html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>"
            << "body{background:#f0f2f5;font-family:sans-serif;padding:20px;direction:rtl;text-align:right;}"
            << ".box{max-width:850px;margin:auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);}"
            << "h2{color:#007bff;text-align:center;}table{width:100%;border-collapse:collapse;margin-top:20px;text-align:center;}"
            << "th,td{padding:12px;border-bottom:1px solid #dee2e6;}th{background:#343a40;color:white;}"
            << ".btn{background:#28a745;color:white;text-decoration:none;padding:6px 12px;border-radius:4px;font-size:14px;margin-left:5px;display:inline-block;}"
            << ".btn-del{background:#dc3545;color:white;text-decoration:none;padding:6px 12px;border-radius:4px;font-size:14px;display:inline-block;}"
+           << ".table-container{width:100%; overflow-x:auto;}"
            << "</style></head><body><div class='box'><h2>💼 لوحة تحكم الإدارة العليا والمسح</h2>"
-           << "<table><thead><tr><th>رقم</th><th>اسم العميل</th><th>النظام</th><th>الأدوار</th><th>الحالة</th><th>الإجراءات المتاحة للمدير فقط</th></tr></thead><tbody>";
+           << "<div class='table-container'><table><thead><tr><th>رقم</th><th>اسم العميل</th><th>النظام</th><th>الأدوار</th><th>الحالة</th><th>الإجراءات المتاحة للمدير فقط</th></tr></thead><tbody>";
 
         for (const auto& insp : list) {
             os << "<tr><td>" << insp.id << "</td>"
@@ -257,45 +260,52 @@ int main() {
                << "<td>" << insp.floors << "</td>"
                << "<td><span style='color:#fd7e14;font-weight:bold;'> " << insp.status << "</span></td>"
                << "<td>"
-               << "<a class='btn' href='/calculate?id=" << insp.id << "&password=" << pass << "'>📊 مراجعة وحساب</a>"
-               << "<a class='btn-del' href='/delete?id=" << insp.id << "&password=" << pass << "' onclick='return confirm(\"هل أنت متأكد من مسح وإلغلة هذه المعاينة كلياً؟\")'>❌ مسح نهائي</a>"
+               << "<a class='btn' href='/calculate?id=" << insp.id << "&role=admin'>📊 مراجعة وحساب</a>"
+               << "<a class='btn-del' href='/delete?id=" << insp.id << "' onclick='return confirm(\"هل أنت متأكد من مسح وإلغاء هذه المعاينة كلياً؟\")'>❌ مسح نهائي</a>"
                << "</td></tr>";
         }
-        os << "</tbody></table><br><a href='/'>← شاشة الفني</a></div></body></html>";
+        os << "</tbody></table></div><br><a href='/'>← شاشة الفني</a></div></body></html>";
         res.set_content(os.str(), "text/html; charset=utf-8");
     });
 
+    // لتسهيل الرجوع من الحذف بشكل آمن
+    svr.Get("/admin", [](const httplib::Request&, httplib::Response& res) {
+        res.set_redirect("/admin-login");
+    });
+
+    // دالة حذف آمنة ومحمية من الـ SQL Injection
     svr.Get("/delete", [](const httplib::Request& req, httplib::Response& res) {
-        string pass = req.get_param_value("password");
-        if (pass != ADMIN_PASSWORD) {
-            res.set_content("غير مسموح للفنيين بمسح المعاينات", "text/plain; charset=utf-8");
-            return;
-        }
         string target_id = req.get_param_value("id");
         PGconn* conn = connect_db();
         if (PQstatus(conn) == CONNECTION_OK) {
-            string delete_query = "DELETE FROM inspections WHERE id = " + target_id + ";";
-            PGresult* d_res = PQexec(conn, delete_query.c_str());
+            const char* paramValues[] = { target_id.c_str() };
+            string delete_query = "DELETE FROM inspections WHERE id = $1;";
+            PGresult* d_res = PQexecParams(conn, delete_query.c_str(), 1, NULL, paramValues, NULL, NULL, 0);
             PQclear(d_res);
         }
         PQfinish(conn);
-        res.set_redirect("/admin?password=" + pass);
+        // إعادة التوجيه لشاشة الدخول كنوع من الأمان
+        res.set_redirect("/admin-login");
     });
 
+    // دالة حساب آمنة ومحمية بالكامل
     svr.Get("/calculate", [&elevator](const httplib::Request& req, httplib::Response& res) {
         string target_id = req.get_param_value("id");
-        string pass = req.get_param_value("password");
+        string role = req.get_param_value("role");
         Inspection insp;
 
         PGconn* conn = connect_db();
         if (PQstatus(conn) == CONNECTION_OK) {
-            if (pass != "tech") {
-                string update_query = "UPDATE inspections SET status = 'تمت المراجعة والاعتماد' WHERE id = " + target_id + ";";
-                PGresult* u_res = PQexec(conn, update_query.c_str());
+            const char* paramValues[] = { target_id.c_str() };
+            
+            if (role == "admin") {
+                string update_query = "UPDATE inspections SET status = 'تمت المراجعة والاعتماد' WHERE id = $1;";
+                PGresult* u_res = PQexecParams(conn, update_query.c_str(), 1, NULL, paramValues, NULL, NULL, 0);
                 PQclear(u_res);
             }
-            string query = "SELECT client_name, m_type, width, depth, floors FROM inspections WHERE id = " + target_id + ";";
-            PGresult* s_res = PQexec(conn, query.c_str());
+            
+            string query = "SELECT client_name, m_type, width, depth, floors FROM inspections WHERE id = $1;";
+            PGresult* s_res = PQexecParams(conn, query.c_str(), 1, NULL, paramValues, NULL, NULL, 0);
             if (PQntuples(s_res) > 0) {
                 insp.client_name = PQgetvalue(s_res, 0, 0);
                 insp.m_type = PQgetvalue(s_res, 0, 1);
@@ -331,7 +341,7 @@ int main() {
         float total = c_brackets + c_bolts + c_ropes + c_fishplates;
 
         ostringstream os;
-        os << "<html><head><meta charset='UTF-8'><style>"
+        os << "<html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>"
            << "body{background:#f0f2f5;font-family:sans-serif;padding:20px;direction:rtl;text-align:right;}"
            << ".box{max-width:600px;margin:auto;background:white;padding:20px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);}"
            << "h2{color:#007bff;text-align:center;}h3{color:#495057;border-bottom:2px solid #dee2e6;padding-bottom:4px;}"
@@ -341,29 +351,30 @@ int main() {
            << ".btbl{width:100%;border-collapse:collapse;margin-top:10px;text-align:center;}"
            << ".btbl th{background:#343a40;color:white;padding:8px;}.btbl td{padding:8px;border-bottom:1px solid #dee2e6;}"
            << ".inv{background:#e2f0d9;padding:15px;border-radius:8px;border:2px dashed #385723;margin-top:15px;text-align:center;font-size:18px;font-weight:bold;color:#385723;}"
+           << ".table-container{width:100%; overflow-x:auto;}"
            << "</style></head><body><div class='box'><h2>📋 تقرير مراجعة المقايسة المعتمدة سحابياً</h2>"
            << "<p style='text-align:center;font-weight:bold;font-size:18px;color:#2b5797;'>العميل: " << insp.client_name << "</p>"
            << "<h3>📐 أولاً: الأبعاد الهندسية</h3>"
-           << "<table class='tbl'>"
+           << "<div class='table-container'><table class='tbl'>"
            << "<tr><th>* Door Type:</th><td>" << door << "</td></tr>"
            << "<tr><th>* Cabin DBG:</th><td><b>" << cabin_dbg << " CM</b></td></tr>"
            << "<tr><th>* CWT DBG:</th><td><b>" << (cwt_dbg == 0 ? "Review Official" : to_string(cwt_dbg) + " CM") << "</b></td></tr>"
            << "<tr><th>* Cabin Width:</th><td><b>" << cab_w << " CM</b></td></tr>"
            << "<tr><th>* Cabin Depth:</th><td><b>" << cab_d << " CM</b></td></tr>"
            << "<tr><th>* Shaft Height:</th><td style='color:#fd7e14;font-weight:bold;'>" << h << " Meters</td></tr>"
-           << "</table>"
+           << "</table></div>"
            << "<h3>📦 ثانياً: البضاعة والتكلفة المالية المحسوبة</h3>"
-           << "<table class='btbl'><thead><tr><th>اسم الصنف</th><th>الكمية</th><th> التكلفة</th></tr></thead><tbody>"
+           << "<div class='table-container'><table class='btbl'><thead><tr><th>اسم الصنف</th><th>الكمية</th><th> التكلفة</th></tr></thead><tbody>"
            << "<tr><td>كوابيل السكك</td><td>" << brackets << " 🛑</td><td>" << c_brackets << " EGP</td></tr>"
            << "<tr><td>مسامير التثبيت</td><td>" << bolts << " 🔩</td><td>" << c_bolts << " EGP</td></tr>"
            << "<tr><td>حبال الواير</td><td>" << ropes << " 🧵</td><td>" << c_ropes << " EGP</td></tr>"
            << "<tr><td>لقم السكك</td><td>" << fishplates << " 🗜️</td><td>" << c_fishplates << " EGP</td></tr>"
-           << "</tbody></table>"
+           << "</tbody></table></div>"
            << "<div class='inv'>💰 إجمالي تكلفة البضاعة: " << total << " EGP</div>";
-           if (pass == "tech") {
+           if (role == "tech") {
                os << "<center><a href='/tech-view' style='display:inline-block;margin-top:15px;color:#007bff;text-decoration:none;'>🔙 العودة لجدول الفني</a></center>";
            } else {
-               os << "<center><a href='/admin?password=" << pass << "' style='display:inline-block;margin-top:15px;color:#007bff;text-decoration:none;'>🔙 العودة لجدول المعاينات للمدير</a></center>";
+               os << "<center><a href='/admin-login' style='display:inline-block;margin-top:15px;color:#007bff;text-decoration:none;'>🔙 العودة لجدول المعاينات للمدير</a></center>";
            }
            os << "</div></body></html>";
         res.set_content(os.str(), "text/html; charset=utf-8");
